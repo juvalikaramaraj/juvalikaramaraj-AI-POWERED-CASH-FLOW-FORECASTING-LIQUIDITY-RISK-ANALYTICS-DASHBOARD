@@ -1,0 +1,2 @@
+# juvalikaramaraj-AI-POWERED-CASH-FLOW-FORECASTING-LIQUIDITY-RISK-ANALYTICS-DASHBOARD
+An AI-powered cash flow forecasting dashboard built using Excel, Power BI, and financial modeling techniques to analyze cash inflows, outflows, liquidity risk, and working capital trends. The dashboard provides interactive visualizations, forecast insights, and key KPIs to support FP&amp;A and business decision-making.
