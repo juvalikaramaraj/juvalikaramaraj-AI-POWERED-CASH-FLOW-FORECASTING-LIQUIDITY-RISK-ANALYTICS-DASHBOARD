@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Cash Flow Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0f1419; --panel:#1a2230; --panel2:#1f2937;
+    --txt:#e8edf3; --sub:#8b97a8; --line:#2a3441;
+    --accent:#3ddc97; --warn:#f4b740; --bad:#ef5b5b; --blue:#4f8df0;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--txt);}
+  header{padding:24px 32px 12px;}
+  header h1{margin:0;font-size:22px;font-weight:600;}
+  header p{margin:4px 0 0;color:var(--sub);font-size:13px;}
+  .tabs{display:flex;gap:8px;padding:0 32px;margin-top:10px;}
+  .tab{padding:8px 16px;border-radius:8px 8px 0 0;background:var(--panel);color:var(--sub);cursor:pointer;font-size:13px;font-weight:600;border:1px solid var(--line);border-bottom:none;}
+  .tab.active{background:var(--panel2);color:var(--txt);}
+  .view{display:none;padding:20px 32px 40px;}
+  .view.active{display:block;}
+  .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;}
+  .kpi .label{color:var(--sub);font-size:11px;text-transform:uppercase;letter-spacing:.04em;}
+  .kpi .val{font-size:24px;font-weight:700;margin-top:6px;}
+  .kpi .sub{font-size:12px;color:var(--sub);margin-top:4px;}
+  .grid2{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px;}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;}
+  .card h3{margin:0 0 12px;font-size:13px;color:var(--sub);font-weight:600;text-transform:uppercase;letter-spacing:.03em;}
+  canvas{max-height:280px;}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  th,td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--line);}
+  th:first-child,td:first-child{text-align:left;}
+  th{color:var(--sub);font-weight:600;}
+  .obs{font-size:11px;}
+  .flag-low{color:var(--warn);}
+  .flag-bad{color:var(--bad);}
+  .flag-good{color:var(--accent);}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;}
+  .pill.healthy{background:rgba(61,220,151,.15);color:var(--accent);}
+  ul.findings{margin:0;padding-left:18px;font-size:13px;line-height:1.7;color:var(--txt);}
+  ul.findings li{margin-bottom:4px;}
+  .small-sub{font-size:12px;color:var(--sub);}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📊 Cash Flow Forecast Dashboard</h1>
+  <p>Base case · Best case · Worst case scenario analysis — Apr to Sep (forecast period)</p>
+</header>
+
+<div class="tabs">
+  <div class="tab active" data-view="overview">Overview</div>
+  <div class="tab" data-view="scenarios">Scenario Comparison</div>
+  <div class="tab" data-view="details">Monthly Detail</div>
+  <div class="tab" data-view="summary">Executive Summary</div>
+</div>
+
+<!-- OVERVIEW -->
+<div class="view active" id="overview">
+  <div class="kpi-row">
+    <div class="kpi"><div class="label">Closing Balance (Latest Forecast)</div><div class="val" id="kpiClosing"></div><div class="sub">Sep (Forecast), Base Case</div></div>
+    <div class="kpi"><div class="label">Lowest Cash Balance</div><div class="val flag-bad" id="kpiLowest"></div><div class="sub">Worst case scenario</div></div>
+    <div class="kpi"><div class="label">Risk Month</div><div class="val flag-low">SEPTEMBER</div><div class="sub">Cash stress begins — action required</div></div>
+    <div class="kpi"><div class="label">Cash Buffer Status</div><div class="val"><span class="pill healthy">HEALTHY</span></div><div class="sub">Base case trending positive</div></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Closing Balance Over Time (Base Case)</h3>
+      <canvas id="balanceChart"></canvas>
+    </div>
+    <div class="card">
+      <h3>Inflow vs Outflow (Actuals + Forecast)</h3>
+      <canvas id="inOutChart"></canvas>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Net Cash Flow by Month</h3>
+      <canvas id="netChart"></canvas>
+    </div>
+    <div class="card">
+      <h3>Key Assumptions</h3>
+      <table>
+        <tr><td>Growth in Inflow</td><td>8%</td></tr>
+        <tr><td>Increase in Outflow</td><td>5%</td></tr>
+        <tr><td>Best Case Inflow Growth</td><td>12%</td></tr>
+        <tr><td>Best Case Outflow Growth</td><td>3%</td></tr>
+        <tr><td>Worst Case Inflow Growth</td><td>3%</td></tr>
+        <tr><td>Worst Case Outflow Growth</td><td>10%</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- SCENARIOS -->
+<div class="view" id="scenarios">
+  <div class="card" style="margin-bottom:14px;">
+    <h3>Closing Balance — Base vs Best vs Worst Case (Forecast Months)</h3>
+    <canvas id="scenarioChart" style="max-height:340px;"></canvas>
+  </div>
+  <div class="grid3">
+    <div class="card">
+      <h3>Best Case</h3>
+      <p class="small-sub">Higher inflow growth (12%), lower outflow growth (3%)</p>
+      <div class="kpi" style="margin-top:8px;"><div class="label">Closing Balance (Sep)</div><div class="val flag-good" id="bestClosing"></div></div>
+    </div>
+    <div class="card">
+      <h3>Base Case</h3>
+      <p class="small-sub">Standard growth assumptions (8% inflow / 5% outflow)</p>
+      <div class="kpi" style="margin-top:8px;"><div class="label">Closing Balance (Sep)</div><div class="val" id="baseClosing"></div></div>
+    </div>
+    <div class="card">
+      <h3>Worst Case</h3>
+      <p class="small-sub">Low inflow growth (3%), high outflow growth (10%)</p>
+      <div class="kpi" style="margin-top:8px;"><div class="label">Closing Balance (Sep)</div><div class="val flag-bad" id="worstClosing"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- DETAILS -->
+<div class="view" id="details">
+  <div class="card">
+    <h3>Full Monthly Cash Flow (Actual + Base Forecast)</h3>
+    <table id="detailTable">
+      <thead><tr><th>Month</th><th>Inflow</th><th>Outflow</th><th>Net</th><th>Opening</th><th>Closing</th><th style="text-align:left;">Observation</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- SUMMARY -->
+<div class="view" id="summary">
+  <div class="grid2">
+    <div class="card">
+      <h3>Purpose</h3>
+      <p style="font-size:13px;line-height:1.6;">This cash flow forecasting model analyzes monthly liquidity position and identifies potential cash surplus or deficit under Base, Best, and Worst case scenarios.</p>
+      <h3 style="margin-top:18px;">Key Findings — Base Case</h3>
+      <ul class="findings">
+        <li>Monthly cash flow remains positive for most periods</li>
+        <li>October shows negative net cash flow due to higher outflows</li>
+        <li>January reflects the strongest liquidity position</li>
+        <li>June shows a thin cash buffer and needs monitoring</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Risk Analysis</h3>
+      <ul class="findings">
+        <li>Cash deficit risk arises if inflows slow and expenses increase</li>
+        <li>Worst case scenario indicates possible cash stress in September</li>
+        <li>Sustained negative cash flow may require external funding or cost control</li>
+      </ul>
+      <h3 style="margin-top:18px;">Recommendations</h3>
+      <ul class="findings">
+        <li>Improve cash collections in low-inflow months</li>
+        <li>Control discretionary expenses during risky periods</li>
+        <li>Maintain a minimum cash buffer for operational safety</li>
+        <li>Regularly update assumptions for accurate forecasting</li>
+      </ul>
+    </div>
+  </div>
+  <div class="card">
+    <h3>How to Read Each KPI</h3>
+    <table>
+      <tr><td>Lowest Cash Balance</td><td>Pulled from worst case sheet — shows maximum risk point</td></tr>
+      <tr><td>Risk Month</td><td>Month where cash is lowest</td></tr>
+      <tr><td>Cash Buffer Status</td><td>Above 50,000 = Healthy · 20,000–50,000 = Watch · Below 20,000 = Critical</td></tr>
+    </table>
+  </div>
+</div>
+
+<script>
+const cashflow = [
+["APRIL",50000,40000,10000,100000,110000,null],
+["MAY",60000,45000,15000,110000,125000,null],
+["JUNE",55000,50000,5000,125000,130000,"LOW BUFFER MONTH"],
+["JULY",70000,52000,18000,130000,148000,null],
+["AUGUST",65000,40000,25000,148000,173000,null],
+["SEPTEMBER",52000,45000,7000,173000,180000,null],
+["OCTOBER",42000,48000,-6000,180000,174000,"NEGATIVE CASH FLOW - HIGHER EXPENSES"],
+["NOVEMBER",68000,52000,16000,174000,190000,null],
+["DECEMBER",57000,40000,17000,190000,207000,null],
+["JANUARY",72000,45000,27000,207000,234000,"STRONG LIQUIDITY MONTH"],
+["FEBRUARY",59000,50000,9000,234000,243000,null],
+["MARCH",61000,52000,9000,243000,252000,null],
+["APRIL (F)",65880,54600,11280,252000,263280,null],
+["MAY (F)",71150.4,57330,13820.4,263280,277100.4,null],
+["JUNE (F)",76842.4,60196.5,16645.9,277100.4,293746.3,null],
+["JULY (F)",82989.8,63206.3,19783.5,293746.3,313529.8,null],
+["AUGUST (F)",89629.0,66366.6,23262.4,313529.8,336792.2,null],
+["SEPTEMBER (F)",96799.3,69684.97,27114.4,336792.2,363906.6,null],
+];
+
+const forecastMonths = ["APR","MAY","JUN","JUL","AUG","SEP"];
+const baseClose = [263280,277100.4,293746.3,313529.8,336792.2,363906.6];
+const bestClose = [266760,288111.6,316990.4,354448.6,401669.2,459981.7];
+const worstClose = [257630,259424.9,256869.2,249392.1,236361.3,217077.3];
+
+document.getElementById('kpiClosing').textContent = '₹' + Math.round(baseClose[baseClose.length-1]).toLocaleString('en-IN');
+document.getElementById('kpiLowest').textContent = '₹-19,284';
+document.getElementById('bestClosing').textContent = '₹' + Math.round(bestClose[bestClose.length-1]).toLocaleString('en-IN');
+document.getElementById('baseClosing').textContent = '₹' + Math.round(baseClose[baseClose.length-1]).toLocaleString('en-IN');
+document.getElementById('worstClosing').textContent = '₹' + Math.round(worstClose[worstClose.length-1]).toLocaleString('en-IN');
+
+// table
+const tbody = document.querySelector('#detailTable tbody');
+cashflow.forEach(r=>{
+  const tr = document.createElement('tr');
+  const obsClass = r[6] ? (r[6].includes('NEGATIVE') ? 'flag-bad' : r[6].includes('STRONG') ? 'flag-good' : 'flag-low') : '';
+  tr.innerHTML = `<td>${r[0]}</td><td>${r[1].toLocaleString('en-IN',{maximumFractionDigits:0})}</td><td>${r[2].toLocaleString('en-IN',{maximumFractionDigits:0})}</td><td>${r[3].toLocaleString('en-IN',{maximumFractionDigits:0})}</td><td>${r[4].toLocaleString('en-IN',{maximumFractionDigits:0})}</td><td>${r[5].toLocaleString('en-IN',{maximumFractionDigits:0})}</td><td class="obs ${obsClass}" style="text-align:left;">${r[6]||''}</td>`;
+  tbody.appendChild(tr);
+});
+
+const gridColor = '#2a3441';
+const fontColor = '#8b97a8';
+Chart.defaults.color = fontColor;
+Chart.defaults.borderColor = gridColor;
+
+new Chart(document.getElementById('balanceChart'),{
+  type:'line',
+  data:{labels:cashflow.map(r=>r[0]),datasets:[{label:'Closing Balance',data:cashflow.map(r=>r[5]),borderColor:'#4f8df0',backgroundColor:'rgba(79,141,240,.15)',fill:true,tension:.3,pointRadius:2}]},
+  options:{plugins:{legend:{display:false}},scales:{x:{ticks:{maxRotation:60,minRotation:60,font:{size:9}}}}}
+});
+
+new Chart(document.getElementById('inOutChart'),{
+  type:'bar',
+  data:{labels:cashflow.map(r=>r[0]),datasets:[
+    {label:'Inflow',data:cashflow.map(r=>r[1]),backgroundColor:'#3ddc97'},
+    {label:'Outflow',data:cashflow.map(r=>r[2]),backgroundColor:'#ef5b5b'}
+  ]},
+  options:{scales:{x:{ticks:{maxRotation:60,minRotation:60,font:{size:9}}}}}
+});
+
+new Chart(document.getElementById('netChart'),{
+  type:'bar',
+  data:{labels:cashflow.map(r=>r[0]),datasets:[{label:'Net Cash Flow',data:cashflow.map(r=>r[3]),backgroundColor:cashflow.map(r=>r[3]<0?'#ef5b5b':'#3ddc97')}]},
+  options:{plugins:{legend:{display:false}},scales:{x:{ticks:{maxRotation:60,minRotation:60,font:{size:9}}}}}
+});
+
+new Chart(document.getElementById('scenarioChart'),{
+  type:'line',
+  data:{labels:forecastMonths,datasets:[
+    {label:'Best Case',data:bestClose,borderColor:'#3ddc97',tension:.3},
+    {label:'Base Case',data:baseClose,borderColor:'#4f8df0',tension:.3},
+    {label:'Worst Case',data:worstClose,borderColor:'#ef5b5b',tension:.3}
+  ]},
+  options:{plugins:{legend:{position:'top'}}}
+});
+
+// tabs
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.view).classList.add('active');
+  });
+});
+</script>
+
+</body>
+</html>
